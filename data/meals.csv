@@ -1,0 +1,16 @@
+id,name,price_rm,serving_g,calories,protein_g,carbs_g,fat_g,image,source
+1,Grilled Chicken Rice,10.50,350,520,35,55,12,assets/meal-placeholder.png,Prototype
+2,Chicken Rice,9.00,300,450,28,50,10,assets/meal-placeholder.png,Prototype
+3,Nasi Lemak,8.50,320,560,20,65,22,assets/meal-placeholder.png,Prototype
+4,Roti Canai,6.00,150,380,10,45,16,assets/meal-placeholder.png,Prototype
+5,Nasi Goreng,7.50,300,480,15,60,18,assets/meal-placeholder.png,Prototype
+6,Mee Goreng,7.00,280,460,14,58,16,assets/meal-placeholder.png,Prototype
+7,Grilled Fish with Rice,12.00,350,490,38,45,10,assets/meal-placeholder.png,Prototype
+8,Vegetable Salad with Egg,9.50,250,320,18,25,14,assets/meal-placeholder.png,Prototype
+9,Beef Rendang Rice,13.50,350,620,30,55,28,assets/meal-placeholder.png,Prototype
+10,Tofu and Vegetable Rice,6.50,300,400,16,55,10,assets/meal-placeholder.png,Prototype
+11,Chicken Chop,11.00,320,540,32,48,20,assets/meal-placeholder.png,Prototype
+12,Tuna Sandwich Set,8.00,220,350,22,35,12,assets/meal-placeholder.png,Prototype
+13,Economy Rice (3 dishes),7.50,350,500,20,60,15,assets/meal-placeholder.png,Prototype
+14,Curry Mee,8.50,300,470,16,55,20,assets/meal-placeholder.png,Prototype
+15,Chicken Satay (10 sticks),10.00,200,450,30,20,25,assets/meal-placeholder.png,Prototype
