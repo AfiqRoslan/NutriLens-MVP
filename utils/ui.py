@@ -13,17 +13,25 @@ RING_TRACK = "#E4E9E6"
 
 
 def inject_css():
-    """Inject the shared card / ring / typography styles used across the app."""
+    """Inject the shared layout / card / ring / typography styles used across the app."""
     st.markdown(
         f"""
         <style>
-        .nl-card {{
-            background: {CARD_BG};
-            border-radius: 16px;
-            padding: 1.25rem 1.5rem;
-            box-shadow: 0 2px 10px rgba(27, 42, 65, 0.08);
-            margin-bottom: 1rem;
-            border: 1px solid #EEF1EF;
+        .block-container {{
+            max-width: 1100px;
+            margin: 0 auto;
+        }}
+        .st-key-nl-best-match-card {{
+            border-radius: 16px !important;
+            box-shadow: 0 2px 10px rgba(27, 42, 65, 0.08) !important;
+            padding: 1.25rem 1.5rem !important;
+            margin-bottom: 1rem !important;
+        }}
+        [class*="st-key-nl-alt-card-"] {{
+            border-radius: 14px !important;
+            box-shadow: 0 2px 10px rgba(27, 42, 65, 0.06) !important;
+            padding: 1rem 1.25rem !important;
+            margin-bottom: 0.75rem !important;
         }}
         .nl-badge {{
             display: inline-block;
@@ -118,52 +126,58 @@ def render_meal_image(image_path):
 
 
 def render_best_match_card(row, reasons):
-    """Render the large Best Match card: image, name/macros, score ring, reasons."""
-    st.markdown('<div class="nl-card">', unsafe_allow_html=True)
-    st.markdown('<span class="nl-badge">★ Best Match</span>', unsafe_allow_html=True)
+    """Render the large Best Match card: image, name/macros, score ring, reasons.
 
+    Uses st.container(border=True, key=...) as the actual nesting mechanism so
+    the columns/image/text below genuinely render inside one bordered/shadowed
+    card, instead of the previous manual <div>...</div> markdown pair (which
+    does not nest Streamlit-rendered content between two separate st.markdown
+    calls).
+    """
     meal_name = html.escape(str(row["name"]))
 
-    img_col, info_col, ring_col = st.columns([1, 2, 1])
-    with img_col:
-        render_meal_image(row["image"])
-    with info_col:
-        st.markdown(f'<div class="nl-meal-name">{meal_name}</div>', unsafe_allow_html=True)
-        st.markdown(
-            f'<div class="nl-meal-meta">RM{row["price_rm"]:.2f} &nbsp;|&nbsp; '
-            f'{row["calories"]:.0f} kcal &nbsp;|&nbsp; {row["protein_g"]:.0f}g protein</div>',
-            unsafe_allow_html=True,
-        )
-        for reason in reasons:
-            safe_reason = html.escape(str(reason))
-            st.markdown(f'<div class="nl-reason">✅ {safe_reason}</div>', unsafe_allow_html=True)
-    with ring_col:
-        st.markdown(render_score_ring(row["match_score"]), unsafe_allow_html=True)
+    with st.container(border=True, key="nl-best-match-card"):
+        st.markdown('<span class="nl-badge">★ Best Match</span>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
-
-
-def render_alt_card(row, reasons):
-    """Render a compact alternative meal card with a collapsible reasons section."""
-    st.markdown('<div class="nl-card">', unsafe_allow_html=True)
-
-    meal_name = html.escape(str(row["name"]))
-
-    img_col, info_col, ring_col = st.columns([1, 3, 1])
-    with img_col:
-        render_meal_image(row["image"])
-    with info_col:
-        st.markdown(f'<div class="nl-meal-name-sm">{meal_name}</div>', unsafe_allow_html=True)
-        st.markdown(
-            f'<div class="nl-meal-meta">RM{row["price_rm"]:.2f} &nbsp;|&nbsp; '
-            f'{row["calories"]:.0f} kcal &nbsp;|&nbsp; {row["protein_g"]:.0f}g protein</div>',
-            unsafe_allow_html=True,
-        )
-        with st.expander("Why this meal?"):
+        img_col, info_col, ring_col = st.columns([1, 2, 1])
+        with img_col:
+            render_meal_image(row["image"])
+        with info_col:
+            st.markdown(f'<div class="nl-meal-name">{meal_name}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="nl-meal-meta">RM{row["price_rm"]:.2f} &nbsp;|&nbsp; '
+                f'{row["calories"]:.0f} kcal &nbsp;|&nbsp; {row["protein_g"]:.0f}g protein</div>',
+                unsafe_allow_html=True,
+            )
             for reason in reasons:
                 safe_reason = html.escape(str(reason))
                 st.markdown(f'<div class="nl-reason">✅ {safe_reason}</div>', unsafe_allow_html=True)
-    with ring_col:
-        st.markdown(render_score_ring(row["match_score"]), unsafe_allow_html=True)
+        with ring_col:
+            st.markdown(render_score_ring(row["match_score"]), unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+
+def render_alt_card(row, reasons):
+    """Render a compact alternative meal card with a collapsible reasons section.
+
+    Each alt card gets a unique container key (derived from the meal id) since
+    Streamlit requires distinct keys per container within a single run.
+    """
+    meal_name = html.escape(str(row["name"]))
+
+    with st.container(border=True, key=f"nl-alt-card-{row['id']}"):
+        img_col, info_col, ring_col = st.columns([1, 3, 1])
+        with img_col:
+            render_meal_image(row["image"])
+        with info_col:
+            st.markdown(f'<div class="nl-meal-name-sm">{meal_name}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="nl-meal-meta">RM{row["price_rm"]:.2f} &nbsp;|&nbsp; '
+                f'{row["calories"]:.0f} kcal &nbsp;|&nbsp; {row["protein_g"]:.0f}g protein</div>',
+                unsafe_allow_html=True,
+            )
+            with st.expander("Why this meal?"):
+                for reason in reasons:
+                    safe_reason = html.escape(str(reason))
+                    st.markdown(f'<div class="nl-reason">✅ {safe_reason}</div>', unsafe_allow_html=True)
+        with ring_col:
+            st.markdown(render_score_ring(row["match_score"]), unsafe_allow_html=True)
