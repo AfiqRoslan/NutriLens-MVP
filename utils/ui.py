@@ -33,6 +33,14 @@ def inject_css():
             padding: 1rem 1.25rem !important;
             margin-bottom: 0.75rem !important;
         }}
+        .st-key-nl-sidebar-logo-card {{
+            border-radius: 14px !important;
+            padding: 1rem !important;
+            margin-bottom: 1rem !important;
+        }}
+        [data-testid="stAlert"] {{
+            padding: 0.6rem 0.9rem;
+        }}
         .nl-badge {{
             display: inline-block;
             background: {GREEN};
@@ -45,7 +53,7 @@ def inject_css():
         }}
         .nl-meal-name {{
             color: {NAVY};
-            font-size: 1.3rem;
+            font-size: 1.5rem;
             font-weight: 700;
             margin: 0.2rem 0;
         }}
@@ -56,6 +64,11 @@ def inject_css():
             margin: 0.1rem 0;
         }}
         .nl-meal-meta {{
+            color: #5A6B7A;
+            font-size: 1rem;
+            margin-bottom: 0.4rem;
+        }}
+        .nl-meal-meta-sm {{
             color: #5A6B7A;
             font-size: 0.92rem;
             margin-bottom: 0.4rem;
@@ -167,7 +180,9 @@ def render_alt_card(row, reasons):
     Each alt card gets a unique container key (derived from the meal id) since
     Streamlit requires distinct keys per container within a single run. Image
     and ring are small fixed sizes so the row height is driven by the text
-    content, not by an oversized image.
+    content, not by an oversized image. Uses the smaller `.nl-meal-meta-sm`
+    typography variant (distinct from the Best Match card's `.nl-meal-meta`)
+    so the step 7 typography bump doesn't re-inflate this card's compactness.
     """
     meal_name = html.escape(str(row["name"]))
 
@@ -178,7 +193,7 @@ def render_alt_card(row, reasons):
         with info_col:
             st.markdown(f'<div class="nl-meal-name-sm">{meal_name}</div>', unsafe_allow_html=True)
             st.markdown(
-                f'<div class="nl-meal-meta">RM{row["price_rm"]:.2f} &nbsp;|&nbsp; '
+                f'<div class="nl-meal-meta-sm">RM{row["price_rm"]:.2f} &nbsp;|&nbsp; '
                 f'{row["calories"]:.0f} kcal &nbsp;|&nbsp; {row["protein_g"]:.0f}g protein</div>',
                 unsafe_allow_html=True,
             )

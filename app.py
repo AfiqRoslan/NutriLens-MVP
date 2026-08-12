@@ -106,10 +106,11 @@ def render_about():
 
 
 def render_sidebar():
-    if os.path.exists(LOGO_PATH):
-        st.sidebar.image(LOGO_PATH, use_container_width=True)
-    else:
-        st.sidebar.title("NutriLens")
+    with st.sidebar.container(border=True, key="nl-sidebar-logo-card"):
+        if os.path.exists(LOGO_PATH):
+            st.image(LOGO_PATH, use_container_width=True)
+        else:
+            st.title("NutriLens")
 
     st.sidebar.markdown("### Preferences")
 
@@ -126,9 +127,7 @@ def render_sidebar():
     if uploaded_file is not None:
         st.sidebar.image(uploaded_file, use_container_width=True)
     st.sidebar.info(
-        "Dish recognition is simulated in this prototype. Your uploaded image "
-        "is previewed only and is not analyzed — recommendations are based "
-        "solely on the Budget and Goal selected above.",
+        "Dish recognition is simulated — your image is previewed only, not analyzed.",
         icon="ℹ️",
     )
 
