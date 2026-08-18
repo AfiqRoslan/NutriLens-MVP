@@ -41,17 +41,32 @@ def get_dataset():
     return clean, errors, warnings
 
 
-def render_recommendations(clean_df, budget, goal, selected_meal_name=None):
+def render_recommendations(
+    clean_df,
+    budget,
+    goal,
+    exclude_poultry=False,
+    selected_meal_name=None,
+):
     evaluation = None
     if selected_meal_name:
-        evaluation = scoring.evaluate_selected_meal(clean_df, selected_meal_name, goal, budget)
+        evaluation = scoring.evaluate_selected_meal(
+            clean_df, selected_meal_name, goal, budget, exclude_poultry=exclude_poultry
+        )
 
     st.title("Your Meal Recommendations" if evaluation is not None else "Your Best Match")
+
+    if exclude_poultry:
+        st.caption(
+            "Meals known to contain poultry are hidden. Remaining ingredient status may be unverified."
+        )
 
     # Rank over every affordable meal (not just the display cap) so the selected
     # meal's id can be excluded from Best Match/alternatives before capping to 3,
     # without losing a real alternative to premature truncation.
-    ranked = scoring.rank_meals(clean_df, goal, budget, top_n=len(clean_df))
+    ranked = scoring.rank_meals(
+        clean_df, goal, budget, exclude_poultry=exclude_poultry, top_n=len(clean_df)
+    )
 
     selected_id = int(evaluation["meal"]["id"]) if evaluation is not None else None
     selected_is_best = (
@@ -59,17 +74,26 @@ def render_recommendations(clean_df, budget, goal, selected_meal_name=None):
     )
 
     if evaluation is not None:
-        ui.render_selected_meal_card(evaluation, is_best_match=selected_is_best)
+        ui.render_selected_meal_card(
+            evaluation, is_best_match=selected_is_best, show_poultry_status=exclude_poultry
+        )
 
     if ranked.empty:
-        st.warning(
-            f"No meals found within RM{budget:g}. "
-            "Try increasing your budget to see recommendations."
-        )
-        cheapest = clean_df.sort_values("price_rm").head(1)
+        if exclude_poultry:
+            st.warning(
+                "No prototype meals matched your current budget and poultry filter. "
+                "Try increasing your budget or turning off the poultry filter."
+            )
+        else:
+            st.warning(
+                f"No meals found within RM{budget:g}. "
+                "Try increasing your budget to see recommendations."
+            )
+        cheapest_pool = scoring.filter_by_poultry(clean_df, exclude_poultry)
+        cheapest = cheapest_pool.sort_values("price_rm").head(1)
         if not cheapest.empty:
             cheapest_price = cheapest.iloc[0]["price_rm"]
-            st.caption(f"The cheapest meal in our dataset is RM{cheapest_price:.2f}.")
+            st.caption(f"The cheapest matching meal in our dataset is RM{cheapest_price:.2f}.")
         return
 
     if evaluation is not None:
@@ -82,7 +106,7 @@ def render_recommendations(clean_df, budget, goal, selected_meal_name=None):
     else:
         best = remaining.iloc[0]
         best_reasons = scoring.generate_reasons(best, goal, budget, is_best=True)
-        ui.render_best_match_card(best, best_reasons)
+        ui.render_best_match_card(best, best_reasons, show_poultry_status=exclude_poultry)
         alt_pool = remaining.iloc[1:]
 
     alternatives = alt_pool.head(3)
@@ -90,7 +114,7 @@ def render_recommendations(clean_df, budget, goal, selected_meal_name=None):
         st.subheader("Other options")
         for _, row in alternatives.iterrows():
             reasons = scoring.generate_reasons(row, goal, budget, is_best=False)
-            ui.render_alt_card(row, reasons)
+            ui.render_alt_card(row, reasons, show_poultry_status=exclude_poultry)
 
     st.caption(
         "Match Score reflects compatibility with your selected goal among meals "
@@ -119,6 +143,8 @@ def render_about():
             - Nutrition values in this version are **placeholder/prototype**
               estimates, not verified against an official food composition
               database.
+            - Dietary/poultry information is prototype data and is not a
+              verified ingredient or allergy-safety source.
             - Meal photos are a shared placeholder graphic, not real photos
               of each dish.
             - Uploading a menu or meal photo previews the image only —
@@ -144,6 +170,11 @@ def render_sidebar(clean_df):
 
     goal = st.sidebar.selectbox("Goal", scoring.GOALS)
 
+    exclude_poultry = st.sidebar.checkbox("Hide meals known to contain poultry", value=False)
+    st.sidebar.caption(
+        "Prototype ingredient information only. Unknown dishes may still contain poultry."
+    )
+
     st.sidebar.markdown("### Or search for a meal")
     selected_meal_name = st.sidebar.selectbox(
         "Search meals",
@@ -167,7 +198,7 @@ def render_sidebar(clean_df):
     st.sidebar.markdown("---")
     nav = st.sidebar.radio("Navigate", ["Recommendations", "About"], label_visibility="collapsed")
 
-    return budget, goal, selected_meal_name, nav
+    return budget, goal, exclude_poultry, selected_meal_name, nav
 
 
 def main():
@@ -179,7 +210,7 @@ def main():
             st.error(err)
         st.stop()
 
-    budget, goal, selected_meal_name, nav = render_sidebar(clean_df)
+    budget, goal, exclude_poultry, selected_meal_name, nav = render_sidebar(clean_df)
 
     if warnings:
         with st.sidebar.expander("Dataset warnings"):
@@ -187,7 +218,13 @@ def main():
                 st.caption(warn)
 
     if nav == "Recommendations":
-        render_recommendations(clean_df, budget, goal, selected_meal_name)
+        render_recommendations(
+            clean_df,
+            budget,
+            goal,
+            exclude_poultry=exclude_poultry,
+            selected_meal_name=selected_meal_name,
+        )
     else:
         render_about()
 

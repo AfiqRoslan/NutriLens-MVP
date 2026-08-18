@@ -7,10 +7,14 @@ a tool that recommends a meal based on **budget** and a **nutrition goal**
 *before* they order. Single-page Streamlit app, local CSV dataset, no
 backend.
 
-Core flow: set budget → pick a nutrition goal → (optionally) upload a
-menu/meal photo for preview only → app filters the local dataset by budget
-→ ranks the remaining meals for the chosen goal → shows one Best Match card
-plus up to three alternatives, each with plain-language reasons.
+Core flow: set budget → pick a nutrition goal → optionally hide meals known
+to contain poultry → optionally search/select a known meal by name instead
+of relying only on the ranked list → (optionally) upload a menu/meal photo
+for preview only → app filters the local dataset by budget and (if enabled)
+poultry status → ranks the remaining meals for the chosen goal → shows one
+Best Match card plus up to three alternatives, each with plain-language
+reasons. A selected meal from search is shown alongside — not duplicated
+inside — the Best Match/alternatives.
 
 ## Tech stack / constraints
 
@@ -41,7 +45,7 @@ plus up to three alternatives, each with plain-language reasons.
 ## Dataset schema (`data/meals.csv`)
 
 Columns: `id, name, price_rm, serving_g, calories, protein_g, carbs_g,
-fat_g, image, source`.
+fat_g, image, source, poultry_status`.
 
 - `image` holds a file **path** (currently `assets/meal-placeholder.png`
   for every row in Phase 1) — not an emoji, not inline data. Keep this a
@@ -54,10 +58,15 @@ fat_g, image, source`.
     Composition Database. **Never** set a row's source to `MyFCD` unless
     the value has actually been checked against MyFCD — don't invent
     data and label it verified. Do not scrape MyFCD.
+- `poultry_status` must be one of `contains`, `does_not_contain`, or
+  `unknown` — see "Dietary / poultry filter" below. Current prototype
+  dataset: 4 `contains`, 11 `unknown`, 0 `does_not_contain`.
 - Scoring is computed strictly from the numeric columns
   (`price_rm`, `calories`, `protein_g`). There is no free-text `tags`
   column driving recommendations — if you're tempted to add one for
   convenience, don't; it would bypass the numeric-only scoring rule.
+  `poultry_status` is a controlled-vocabulary filter field, not a tag,
+  and it never feeds into scoring — see below.
 
 ## Nutrition goals (fixed set of exactly four)
 
@@ -109,6 +118,42 @@ plainly that dish recognition is simulated/not implemented in this
 version. This is a hard product-honesty requirement, not just a nice-
 to-have disclaimer.
 
+## Manual meal search
+
+Validation showed some users (particularly working adults) prefer searching
+for a known dish over scanning/uploading an image. `scoring.search_meal_names`
+lists known meal names for a sidebar selectbox; `scoring.evaluate_selected_meal`
+resolves a selected name to its row plus a goal/budget/poultry evaluation.
+
+This resolved-meal pathway is intentionally the single entry point for
+"a meal has been identified" — a future image-recognition feature should
+resolve to a meal and call `evaluate_selected_meal` the same way a manual
+search does, rather than duplicating evaluation logic. Do not implement the
+image-recognition side yet; only keep this pathway shaped so it could plug
+in later.
+
+The selected meal is deduplicated against Best Match/alternatives by `id`
+(never by name) so it's never shown twice on the Recommendations page.
+
+## Dietary / poultry filter (prototype)
+
+The sidebar control "Hide meals known to contain poultry" means exactly
+that — it is **not** an allergy-safety feature, not verified ingredient
+detection, and makes no cross-contamination claims.
+
+- `poultry_status == "contains"` → excluded when the filter is on.
+- `poultry_status == "unknown"` → **remains eligible** when the filter is
+  on, but the UI must label it as unverified (e.g. "⚠ Poultry status
+  unverified") rather than implying it passed a safety check. Never treat
+  `unknown` as confirmed poultry-free.
+- `poultry_status == "does_not_contain"` → reserved for future records
+  backed by sufficiently verified ingredient data; there are currently zero
+  such rows, so no "poultry-free" wording is shown anywhere yet.
+
+This is a hard pre-scoring filter (`scoring.filter_by_poultry`), applied
+before `score_meals`. It never modifies Match Score weights or formulas —
+it only changes which rows are eligible to be scored.
+
 ## Navigation
 
 Only `Recommendations` and `About` in v0.1. No `History` — there is no
@@ -119,7 +164,26 @@ is a simple in-page section/expander, not a separate route.
 
 - All nutrition data is `Prototype` (placeholder), not verified MyFCD
   data.
+- `poultry_status` is inferred from dish names in this prototype dataset,
+  not verified ingredient lists — it is not allergy-safety guidance and
+  makes no cross-contamination claims.
 - Meal images are a single shared placeholder graphic, not real photos.
 - No persistence — nothing is saved between sessions.
 - Dish recognition from uploaded images is not implemented; the
   uploader is preview-only.
+
+## Validation-driven product refinement
+
+Follow-up user validation (post-Phase-2) informed the features above:
+
+- Manual search/select was added because some users — particularly working
+  adults — preferred searching for a known dish over scanning/uploading an
+  image; scanning is no longer the only way to identify a meal.
+- The poultry filter was added from a specific validated dietary-avoidance
+  case (chicken/poultry avoidance due to an allergy/eczema trigger). It is
+  deliberately scoped narrow (poultry only, tri-state, hard filter) rather
+  than a general allergen system.
+- Retention (users forgetting/stopping use of the app) remains an
+  unresolved validation/design question and is **not** implemented — no
+  persistence, notifications, or reminder features exist, and none should
+  be added without a separate decision to do so.

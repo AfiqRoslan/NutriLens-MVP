@@ -149,7 +149,21 @@ def render_meal_image(image_path, size=220):
         )
 
 
-def render_best_match_card(row, reasons):
+def _render_poultry_unverified_note(poultry_status):
+    """Lightweight, non-medical status line — the one currently supported case.
+
+    'contains' is intentionally not rendered here: scoring.py already filters
+    those rows out of ranked results whenever the poultry filter is active, so
+    a ranked card should never carry that status while this note is shown (the
+    selected-meal card handles 'contains' explicitly, with its own message,
+    since it can bypass filtering). 'does_not_contain' has no current records,
+    so no wording is invented for it yet.
+    """
+    if poultry_status == "unknown":
+        st.caption("⚠ Poultry status unverified")
+
+
+def render_best_match_card(row, reasons, show_poultry_status=False):
     """Render the large Best Match card: image, name/macros, score ring, reasons.
 
     Uses st.container(border=True, key=...) as the actual nesting mechanism so
@@ -173,6 +187,8 @@ def render_best_match_card(row, reasons):
                 f'{row["calories"]:.0f} kcal &nbsp;|&nbsp; {row["protein_g"]:.0f}g protein</div>',
                 unsafe_allow_html=True,
             )
+            if show_poultry_status:
+                _render_poultry_unverified_note(row["poultry_status"])
             for reason in reasons:
                 safe_reason = html.escape(str(reason))
                 st.markdown(f'<div class="nl-reason">✅ {safe_reason}</div>', unsafe_allow_html=True)
@@ -180,20 +196,27 @@ def render_best_match_card(row, reasons):
             st.markdown(render_score_ring(row["match_score"], size=104), unsafe_allow_html=True)
 
 
-def render_selected_meal_card(evaluation, is_best_match=False):
+def render_selected_meal_card(
+    evaluation,
+    is_best_match=False,
+    show_poultry_status=False,
+):
     """Render the meal a user found via manual search.
 
     Shows full nutrition facts (price, calories, protein, carbs, fat) plus a
-    goal evaluation reusing the same reasons/ring as the ranked cards when the
-    meal is within budget. Reuses the existing container/CSS pattern rather
-    than introducing new styling. When this meal is also the current Best
-    Match, the caller skips rendering a separate Best Match card and passes
-    is_best_match=True so the badge communicates that instead of duplicating
-    the meal.
+    goal evaluation reusing the same reasons/ring as the ranked cards. Gated
+    on evaluation["is_eligible"] (budget AND poultry filter), not just
+    in_budget alone -- an in-budget meal can still be is_eligible=False when
+    the poultry filter is active and poultry_status == "contains", in which
+    case reasons/match_score are None and must not be iterated/rendered.
+    Reuses the existing container/CSS pattern rather than introducing new
+    styling. When this meal is also the current Best Match, the caller skips
+    rendering a separate Best Match card and passes is_best_match=True so the
+    badge communicates that instead of duplicating the meal.
     """
     meal = evaluation["meal"]
     meal_name = html.escape(str(meal["name"]))
-    badge_text = "🔍 Selected Meal • ⭐ Best Match" if is_best_match else "🔍 Selected Meal"
+    badge_text = "\U0001F50D Selected Meal \u2022 \u2B50 Best Match" if is_best_match else "\U0001F50D Selected Meal"
 
     with st.container(border=True, key="nl-selected-meal-card"):
         st.markdown(f'<span class="nl-badge">{badge_text}</span>', unsafe_allow_html=True)
@@ -209,22 +232,34 @@ def render_selected_meal_card(evaluation, is_best_match=False):
                 f'&nbsp;|&nbsp; {meal["carbs_g"]:.0f}g carbs &nbsp;|&nbsp; {meal["fat_g"]:.0f}g fat</div>',
                 unsafe_allow_html=True,
             )
-            if evaluation["in_budget"]:
-                for reason in evaluation["reasons"]:
-                    safe_reason = html.escape(str(reason))
-                    st.markdown(f'<div class="nl-reason">✅ {safe_reason}</div>', unsafe_allow_html=True)
-            else:
+
+            if not evaluation["in_budget"]:
                 st.markdown(
                     '<div class="nl-reason">This meal is above your current budget, '
                     'so it was not scored against your goal.</div>',
                     unsafe_allow_html=True,
                 )
+                if show_poultry_status and meal["poultry_status"] == "unknown":
+                    _render_poultry_unverified_note(meal["poultry_status"])
+            elif evaluation["is_eligible"]:
+                for reason in evaluation["reasons"]:
+                    safe_reason = html.escape(str(reason))
+                    st.markdown(f'<div class="nl-reason">\u2705 {safe_reason}</div>', unsafe_allow_html=True)
+                if show_poultry_status and meal["poultry_status"] == "unknown":
+                    _render_poultry_unverified_note(meal["poultry_status"])
+            else:
+                st.caption("Contains poultry (prototype data)")
+                st.markdown(
+                    '<div class="nl-reason">Known to contain poultry in this prototype '
+                    'dataset, so it is excluded from your recommendations.</div>',
+                    unsafe_allow_html=True,
+                )
         with ring_col:
-            if evaluation["in_budget"]:
+            if evaluation["is_eligible"]:
                 st.markdown(render_score_ring(evaluation["match_score"]), unsafe_allow_html=True)
 
 
-def render_alt_card(row, reasons):
+def render_alt_card(row, reasons, show_poultry_status=False):
     """Render a compact alternative meal card with a collapsible reasons section.
 
     Each alt card gets a unique container key (derived from the meal id) since
@@ -247,6 +282,8 @@ def render_alt_card(row, reasons):
                 f'{row["calories"]:.0f} kcal &nbsp;|&nbsp; {row["protein_g"]:.0f}g protein</div>',
                 unsafe_allow_html=True,
             )
+            if show_poultry_status and row["poultry_status"] == "unknown":
+                _render_poultry_unverified_note(row["poultry_status"])
             with st.expander("Why this meal?"):
                 for reason in reasons:
                     safe_reason = html.escape(str(reason))
