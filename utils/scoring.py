@@ -183,3 +183,45 @@ def generate_reasons(row, goal, budget, is_best=False):
         reasons.append(f"Best match for {goal}")
 
     return reasons
+
+
+def search_meal_names(df):
+    """Return a sorted, de-duplicated list of meal names for a search/select widget."""
+    return sorted(df["name"].dropna().unique().tolist())
+
+
+def evaluate_selected_meal(df, meal_name, goal, budget):
+    """Look up a meal by name and evaluate it against the goal/budget.
+
+    This is the single pathway a selected meal should go through to get its
+    nutrition info and goal-based evaluation, regardless of how it was
+    identified — manual search today, potentially image recognition later.
+    Reuses filter_by_budget/score_meals/generate_reasons unmodified, so the
+    Match Score formula and the budget-before-scoring rule stay untouched;
+    an over-budget meal is never scored.
+
+    Returns None if meal_name isn't in df, otherwise a dict:
+    {"meal": Series, "in_budget": bool, "match_score": int|None, "reasons": list|None}
+    """
+    matches = df[df["name"] == meal_name]
+    if matches.empty:
+        return None
+
+    meal = matches.iloc[0]
+    affordable = filter_by_budget(df, budget)
+    in_budget = bool((affordable["id"] == meal["id"]).any())
+
+    match_score = None
+    reasons = None
+    if in_budget:
+        scored = score_meals(affordable, goal)
+        meal = scored.loc[scored["id"] == meal["id"]].iloc[0]
+        match_score = int(meal["match_score"])
+        reasons = generate_reasons(meal, goal, budget, is_best=False)
+
+    return {
+        "meal": meal,
+        "in_budget": in_budget,
+        "match_score": match_score,
+        "reasons": reasons,
+    }

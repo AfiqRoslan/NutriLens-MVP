@@ -33,6 +33,12 @@ def inject_css():
             padding: 1rem 1.25rem !important;
             margin-bottom: 0.75rem !important;
         }}
+        .st-key-nl-selected-meal-card {{
+            border-radius: 14px !important;
+            box-shadow: 0 2px 10px rgba(27, 42, 65, 0.06) !important;
+            padding: 1rem 1.25rem !important;
+            margin-bottom: 1rem !important;
+        }}
         .st-key-nl-sidebar-logo-card {{
             border-radius: 14px !important;
             padding: 1rem !important;
@@ -172,6 +178,50 @@ def render_best_match_card(row, reasons):
                 st.markdown(f'<div class="nl-reason">✅ {safe_reason}</div>', unsafe_allow_html=True)
         with ring_col:
             st.markdown(render_score_ring(row["match_score"], size=104), unsafe_allow_html=True)
+
+
+def render_selected_meal_card(evaluation, is_best_match=False):
+    """Render the meal a user found via manual search.
+
+    Shows full nutrition facts (price, calories, protein, carbs, fat) plus a
+    goal evaluation reusing the same reasons/ring as the ranked cards when the
+    meal is within budget. Reuses the existing container/CSS pattern rather
+    than introducing new styling. When this meal is also the current Best
+    Match, the caller skips rendering a separate Best Match card and passes
+    is_best_match=True so the badge communicates that instead of duplicating
+    the meal.
+    """
+    meal = evaluation["meal"]
+    meal_name = html.escape(str(meal["name"]))
+    badge_text = "🔍 Selected Meal • ⭐ Best Match" if is_best_match else "🔍 Selected Meal"
+
+    with st.container(border=True, key="nl-selected-meal-card"):
+        st.markdown(f'<span class="nl-badge">{badge_text}</span>', unsafe_allow_html=True)
+
+        img_col, info_col, ring_col = st.columns([1, 3, 1])
+        with img_col:
+            render_meal_image(meal["image"], size=140)
+        with info_col:
+            st.markdown(f'<div class="nl-meal-name-sm">{meal_name}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="nl-meal-meta-sm">RM{meal["price_rm"]:.2f} &nbsp;|&nbsp; '
+                f'{meal["calories"]:.0f} kcal &nbsp;|&nbsp; {meal["protein_g"]:.0f}g protein '
+                f'&nbsp;|&nbsp; {meal["carbs_g"]:.0f}g carbs &nbsp;|&nbsp; {meal["fat_g"]:.0f}g fat</div>',
+                unsafe_allow_html=True,
+            )
+            if evaluation["in_budget"]:
+                for reason in evaluation["reasons"]:
+                    safe_reason = html.escape(str(reason))
+                    st.markdown(f'<div class="nl-reason">✅ {safe_reason}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(
+                    '<div class="nl-reason">This meal is above your current budget, '
+                    'so it was not scored against your goal.</div>',
+                    unsafe_allow_html=True,
+                )
+        with ring_col:
+            if evaluation["in_budget"]:
+                st.markdown(render_score_ring(evaluation["match_score"]), unsafe_allow_html=True)
 
 
 def render_alt_card(row, reasons):
