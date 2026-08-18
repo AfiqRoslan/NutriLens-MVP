@@ -42,6 +42,11 @@ REQUIRED_COLUMNS = [
 
 NUMERIC_COLUMNS = ["price_rm", "serving_g", "calories", "protein_g", "carbs_g", "fat_g"]
 
+# poultry_status is a hard pre-scoring filter gate, not a scoring input, and not
+# a medical allergy-safety claim. "unknown" must never be treated as confirmed
+# safe/poultry-free — see filter_by_poultry().
+POULTRY_STATUS_VALUES = {"contains", "does_not_contain", "unknown"}
+
 
 def load_meals(csv_path):
     """Load the local meal dataset. Raises FileNotFoundError / pandas errors as-is."""
@@ -93,12 +98,46 @@ def validate_meals(df):
             f"{unverified_sources}. Expected 'Prototype' or 'MyFCD'."
         )
 
+    if "poultry_status" not in clean.columns:
+        clean["poultry_status"] = "unknown"
+        warnings.append(
+            "Dataset has no poultry_status column; all meals defaulted to 'unknown' "
+            "(not treated as confirmed poultry-free)."
+        )
+    else:
+        invalid_poultry = (
+            clean["poultry_status"].isna()
+            | (clean["poultry_status"].astype(str).str.strip() == "")
+            | ~clean["poultry_status"].isin(POULTRY_STATUS_VALUES)
+        )
+        if invalid_poultry.any():
+            bad_ids = clean.loc[invalid_poultry, "id"].tolist()
+            warnings.append(
+                "Defaulted row(s) with invalid/missing poultry_status to 'unknown' "
+                f"(not treated as confirmed poultry-free): id(s) {bad_ids}"
+            )
+            clean.loc[invalid_poultry, "poultry_status"] = "unknown"
+
     return clean.reset_index(drop=True), errors, warnings
 
 
 def filter_by_budget(df, budget):
     """Remove meals priced above the user's maximum budget."""
     return df[df["price_rm"] <= budget].reset_index(drop=True)
+
+
+def filter_by_poultry(df, exclude_poultry):
+    """Hard pre-scoring filter: drop meals with poultry_status == 'contains'
+    when exclude_poultry is True.
+
+    This is a "hide known-contains" filter, not an allergy-safety guarantee.
+    'unknown' rows are NEVER excluded here — they simply aren't confirmed
+    either way, so the UI must label them as unverified rather than implying
+    they passed a safety check.
+    """
+    if not exclude_poultry:
+        return df.reset_index(drop=True)
+    return df[df["poultry_status"] != "contains"].reset_index(drop=True)
 
 
 def _normalize(series, higher_is_better=True):
@@ -137,18 +176,21 @@ def score_meals(df, goal):
     return scored
 
 
-def rank_meals(df, goal, budget, top_n=4):
-    """Filter by budget, score by goal, and return the top-N ranked meals.
+def rank_meals(df, goal, budget, exclude_poultry=False, top_n=4):
+    """Filter by budget and (optionally) known poultry content, score by goal,
+    and return the top-N ranked meals.
 
-    Ranking is computed over ALL meals that pass the budget filter, so the
-    top result (index 0) is the best match among every affordable option,
-    not just among the top_n returned.
+    Ranking is computed over ALL meals that pass both filters, so the top
+    result (index 0) is the best match among every eligible option, not just
+    among the top_n returned. Filtering never touches the Match Score
+    formula/weights — it only shrinks the candidate pool before scoring.
     """
     affordable = filter_by_budget(df, budget)
-    if affordable.empty:
-        return affordable
+    eligible = filter_by_poultry(affordable, exclude_poultry)
+    if eligible.empty:
+        return eligible
 
-    scored = score_meals(affordable, goal)
+    scored = score_meals(eligible, goal)
     ranked = scored.sort_values(
         by=["match_score", "price_rm"], ascending=[False, True]
     ).reset_index(drop=True)
@@ -190,18 +232,29 @@ def search_meal_names(df):
     return sorted(df["name"].dropna().unique().tolist())
 
 
-def evaluate_selected_meal(df, meal_name, goal, budget):
-    """Look up a meal by name and evaluate it against the goal/budget.
+def evaluate_selected_meal(df, meal_name, goal, budget, exclude_poultry=False):
+    """Look up a meal by name and evaluate it against the goal/budget/diet filter.
 
     This is the single pathway a selected meal should go through to get its
     nutrition info and goal-based evaluation, regardless of how it was
     identified — manual search today, potentially image recognition later.
-    Reuses filter_by_budget/score_meals/generate_reasons unmodified, so the
-    Match Score formula and the budget-before-scoring rule stay untouched;
-    an over-budget meal is never scored.
+    Reuses filter_by_budget/filter_by_poultry/score_meals/generate_reasons
+    unmodified, so the Match Score formula stays untouched.
+
+    A selected meal is always returned (with its own poultry_status readable
+    on the row) even when it's over budget or excluded by the active poultry
+    filter — the caller decides how to flag that; this function just never
+    fabricates a score for a meal outside the current eligible set.
 
     Returns None if meal_name isn't in df, otherwise a dict:
-    {"meal": Series, "in_budget": bool, "match_score": int|None, "reasons": list|None}
+    {
+        "meal": Series,
+        "in_budget": bool,       # passes the budget filter only
+        "is_eligible": bool,     # passes BOTH the budget filter and the
+                                  # currently active poultry filter
+        "match_score": int | None,   # set only when is_eligible is True
+        "reasons": list | None,      # set only when is_eligible is True
+    }
     """
     matches = df[df["name"] == meal_name]
     if matches.empty:
@@ -211,10 +264,13 @@ def evaluate_selected_meal(df, meal_name, goal, budget):
     affordable = filter_by_budget(df, budget)
     in_budget = bool((affordable["id"] == meal["id"]).any())
 
+    eligible = filter_by_poultry(affordable, exclude_poultry)
+    is_eligible = bool((eligible["id"] == meal["id"]).any())
+
     match_score = None
     reasons = None
-    if in_budget:
-        scored = score_meals(affordable, goal)
+    if is_eligible:
+        scored = score_meals(eligible, goal)
         meal = scored.loc[scored["id"] == meal["id"]].iloc[0]
         match_score = int(meal["match_score"])
         reasons = generate_reasons(meal, goal, budget, is_best=False)
@@ -222,6 +278,7 @@ def evaluate_selected_meal(df, meal_name, goal, budget):
     return {
         "meal": meal,
         "in_budget": in_budget,
+        "is_eligible": is_eligible,
         "match_score": match_score,
         "reasons": reasons,
     }
