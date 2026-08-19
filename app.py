@@ -158,7 +158,7 @@ def render_about():
 def render_sidebar(clean_df):
     with st.sidebar.container(border=True, key="nl-sidebar-logo-card"):
         if os.path.exists(LOGO_PATH):
-            st.image(LOGO_PATH, use_container_width=True)
+            st.image(LOGO_PATH, width="stretch")
         else:
             st.title("NutriLens")
 
@@ -189,7 +189,7 @@ def render_sidebar(clean_df):
         "PNG or JPG", type=["png", "jpg", "jpeg"], label_visibility="collapsed"
     )
     if uploaded_file is not None:
-        st.sidebar.image(uploaded_file, use_container_width=True)
+        st.sidebar.image(uploaded_file, width="stretch")
     st.sidebar.info(
         "Dish recognition is simulated — your image is previewed only, not analyzed.",
         icon="ℹ️",
