@@ -91,11 +91,11 @@ def validate_meals(df):
         warnings.append(f"Dropped row(s) with missing name: id(s) {bad_ids}")
         clean = clean[~missing_name]
 
-    unverified_sources = sorted(set(clean["source"].dropna().unique()) - {"Prototype", "MyFCD"})
-    if unverified_sources:
+    unrecognized_sources = sorted(set(clean["source"].dropna().unique()) - {"Prototype"})
+    if unrecognized_sources:
         warnings.append(
             "Dataset contains unrecognized source label(s): "
-            f"{unverified_sources}. Expected 'Prototype' or 'MyFCD'."
+            f"{unrecognized_sources}. Expected 'Prototype' for the current MVP."
         )
 
     if "poultry_status" not in clean.columns:

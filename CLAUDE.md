@@ -51,13 +51,12 @@ fat_g, image, source, poultry_status`.
   for every row in Phase 1) — not an emoji, not inline data. Keep this a
   path so real per-meal photos can be dropped in later without changing
   the schema or the rendering code in `utils/ui.py`.
-- `source` must be either `Prototype` or `MyFCD`.
-  - `Prototype` = placeholder/estimated values, not verified nutrition
-    data. This is what every row currently uses.
-  - `MyFCD` = a value verified against the actual Malaysian Food
-    Composition Database. **Never** set a row's source to `MyFCD` unless
-    the value has actually been checked against MyFCD — don't invent
-    data and label it verified. Do not scrape MyFCD.
+- `source` currently uses `Prototype` for every row.
+  - `Prototype` = temporary menu, price, and nutrition values used to test
+    the recommendation flow.
+  - The final restaurant/menu source is **TBC**. When the team selects it,
+    update the dataset and this source rule together. Do not relabel
+    prototype values as verified restaurant data.
 - `poultry_status` must be one of `contains`, `does_not_contain`, or
   `unknown` — see "Dietary / poultry filter" below. Current prototype
   dataset: 4 `contains`, 11 `unknown`, 0 `does_not_contain`.
@@ -162,7 +161,7 @@ is a simple in-page section/expander, not a separate route.
 
 ## Known limitations (current phase)
 
-- All nutrition data is `Prototype` (placeholder), not verified MyFCD
+- All menu, price, and nutrition data is currently `Prototype`; the restaurant/menu source is TBC
   data.
 - `poultry_status` is inferred from dish names in this prototype dataset,
   not verified ingredient lists — it is not allergy-safety guidance and

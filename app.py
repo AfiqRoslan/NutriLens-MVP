@@ -1,8 +1,9 @@
 """NutriLens MVP — Streamlit entry point.
 
-Sidebar collects Budget + Nutrition Goal + an optional (preview-only) image
-upload. Main area shows the ranked Best Match + up to three alternatives,
-computed from utils/scoring.py and rendered with utils/ui.py.
+Sidebar collects Budget + Nutrition Goal, a prototype poultry-avoidance filter,
+manual meal search, and an optional preview-only image upload. Main area shows
+the ranked Best Match + up to three alternatives, computed from utils/scoring.py
+and rendered with utils/ui.py.
 """
 
 import os
@@ -126,8 +127,11 @@ def render_about():
     st.title("About NutriLens")
     st.markdown(
         """
-        NutriLens helps budget-conscious students decide what to order by
-        weighing both **price** and a **nutrition goal** before they buy.
+        NutriLens helps students, working adults, and active individuals
+        who eat out often make faster food decisions without manually
+        comparing every option. It matches meals against **price**, a
+        **nutrition goal**, and available dietary preferences before they
+        order.
 
         **How recommendations work:** meals priced above your selected budget
         are removed first. The remaining meals are ranked with a Match Score
@@ -140,9 +144,9 @@ def render_about():
     with st.expander("Data & limitations in this prototype"):
         st.markdown(
             """
-            - Nutrition values in this version are **placeholder/prototype**
-              estimates, not verified against an official food composition
-              database.
+            - Menu items, prices, and nutrition values in this version are
+              **placeholder/prototype data**. The restaurant/menu source is
+              **TBC** and can be replaced after team discussion.
             - Dietary/poultry information is prototype data and is not a
               verified ingredient or allergy-safety source.
             - Meal photos are a shared placeholder graphic, not real photos
@@ -170,21 +174,21 @@ def render_sidebar(clean_df):
 
     goal = st.sidebar.selectbox("Goal", scoring.GOALS)
 
-    exclude_poultry = st.sidebar.checkbox("Hide meals known to contain poultry", value=False)
+    exclude_poultry = st.sidebar.checkbox("Avoid poultry (prototype)", value=False)
     st.sidebar.caption(
-        "Prototype ingredient information only. Unknown dishes may still contain poultry."
+        "Prototype meal metadata only. This is not an allergy-safety check; unknown dishes may still contain poultry."
     )
 
-    st.sidebar.markdown("### Or search for a meal")
+    st.sidebar.markdown("### Find a meal")
     selected_meal_name = st.sidebar.selectbox(
-        "Search meals",
+        "Search current menu",
         options=scoring.search_meal_names(clean_df),
         index=None,
         placeholder="Search meals by name…",
         label_visibility="collapsed",
     )
 
-    st.sidebar.markdown("### Upload menu or meal image (optional)")
+    st.sidebar.markdown("### Upload menu or meal image (prototype preview)")
     uploaded_file = st.sidebar.file_uploader(
         "PNG or JPG", type=["png", "jpg", "jpeg"], label_visibility="collapsed"
     )
