@@ -130,21 +130,17 @@ def render_score_ring(score, size=88):
     """
 
 
-def render_meal_image(image_path, size=220):
-    """Render a meal image at a fixed pixel size if the file exists, otherwise a
-    neutral placeholder box at the same fixed size.
+def render_meal_image(image_path, width="stretch"):
+    """Render a meal image responsively inside its card column.
 
-    Fixed-size (rather than use_container_width) so image size is controlled
-    explicitly per card type instead of stretching to whatever column width
-    an unconstrained row happens to produce. Kept path-based (rather than
-    emoji/inline data) so real per-meal photos can be dropped in later
-    without changing this function or the CSV schema.
+    Using the column width keeps meal photos prominent on desktop while
+    allowing them to shrink naturally on narrower screens.
     """
     if image_path and os.path.exists(image_path):
-        st.image(image_path, width=size)
+        st.image(image_path, width=width)
     else:
         st.markdown(
-            f'<div class="nl-placeholder-img" style="width:{size}px;height:{size}px;">Image not available</div>',
+            '<div class="nl-placeholder-img" style="width:100%;aspect-ratio:4/3;">Image not available</div>',
             unsafe_allow_html=True,
         )
 
@@ -177,9 +173,9 @@ def render_best_match_card(row, reasons, show_poultry_status=False):
     with st.container(border=True, key="nl-best-match-card"):
         st.markdown('<span class="nl-badge">★ Best Match</span>', unsafe_allow_html=True)
 
-        img_col, info_col, ring_col = st.columns([1, 3, 1])
+        img_col, info_col, ring_col = st.columns([1.4, 3, 1])
         with img_col:
-            render_meal_image(row["image"], size=200)
+            render_meal_image(row["image"])
         with info_col:
             st.markdown(f'<div class="nl-meal-name">{meal_name}</div>', unsafe_allow_html=True)
             st.markdown(
@@ -221,9 +217,9 @@ def render_selected_meal_card(
     with st.container(border=True, key="nl-selected-meal-card"):
         st.markdown(f'<span class="nl-badge">{badge_text}</span>', unsafe_allow_html=True)
 
-        img_col, info_col, ring_col = st.columns([1, 3, 1])
+        img_col, info_col, ring_col = st.columns([1.3, 3, 1])
         with img_col:
-            render_meal_image(meal["image"], size=140)
+            render_meal_image(meal["image"])
         with info_col:
             st.markdown(f'<div class="nl-meal-name-sm">{meal_name}</div>', unsafe_allow_html=True)
             st.markdown(
@@ -272,9 +268,9 @@ def render_alt_card(row, reasons, show_poultry_status=False):
     meal_name = html.escape(str(row["name"]))
 
     with st.container(border=True, key=f"nl-alt-card-{row['id']}"):
-        img_col, info_col, ring_col = st.columns([1, 3, 1])
+        img_col, info_col, ring_col = st.columns([0.9, 3.4, 0.8])
         with img_col:
-            render_meal_image(row["image"], size=72)
+            render_meal_image(row["image"])
         with info_col:
             st.markdown(f'<div class="nl-meal-name-sm">{meal_name}</div>', unsafe_allow_html=True)
             st.markdown(
