@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NutriLens: MVP Walkthrough Documentation</title>
+<link rel="stylesheet" href="nutrilens-mvp-documentation.css">
+</head>
+<body>
+
+<div class="page" id="page-1">
+
+  <div class="doc-header">
+    <div class="doc-header-top">
+      <img class="doc-logo" src="../../assets/nutrilens-logo.png" alt="NutriLens logo">
+      <h1 class="doc-title">NutriLens: MVP Walkthrough Documentation</h1>
+    </div>
+    <div class="doc-meta-row">
+      <div class="doc-meta">Prepared by <strong>Afiq Roslan</strong> (Builder)</div>
+      <div class="doc-course">SAIA2183: AI for Tech Venture<br>Faculty of Artificial Intelligence, Universiti Teknologi Malaysia</div>
+    </div>
+    <div class="doc-rule"></div>
+  </div>
+
+  <div class="intro">
+    <p>NutriLens is an interactive Streamlit MVP built to test one core assumption: will budget-conscious users use a tool that recommends meals based on budget and nutrition goal before they order? This document walks through the current working prototype as it behaves today. Each section shows an implemented interaction, what it does, and where relevant, the validation insight it responds to.</p>
+  </div>
+
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2 class="sec-title">Set your budget and nutrition goal</h2>
+    </div>
+    <div class="sec-body">
+      <div class="sec-media">
+        <img class="shot" style="width:46mm" src="processed/01-preferences-goal.png" alt="Budget and Goal selectors in the sidebar">
+      </div>
+      <div class="sec-copy">
+        <p>The sidebar is where every recommendation starts. A user selects one of eight budget tiers from RM6 to RM25 and chooses a nutrition goal: High Protein, Low Calorie, Best Value, or Balanced. Optional controls allow the user to search for a known meal, apply the prototype poultry filter, or preview an uploaded meal or menu image. In this walkthrough, the user sets RM12 and High Protein.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2 class="sec-title">View the Best Match and alternatives</h2>
+    </div>
+    <div class="sec-body">
+      <div class="sec-media">
+        <img class="shot" style="width:76mm" src="screenshots/02-best-match-and-options.png" alt="Best Match card and alternative options">
+      </div>
+      <div class="sec-copy">
+        <p>NutriLens first removes meals above the selected budget, then ranks the eligible options using a Match Score from 0-100 for the chosen nutrition goal. The highest-scoring meal is presented as the Best Match, followed by up to three alternatives. In this example, Grilled Fish with Rice is the Best Match at 68/100.</p>
+        <p>Match Score represents relative compatibility within the eligible options; it is not a health or medical rating.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="page-footer">
+    <span>NutriLens | SAIA2183: AI for Tech Venture | Faculty of Artificial Intelligence, UTM</span>
+    <span>Page 1</span>
+  </div>
+
+</div>
+
+<div class="page" id="page-2">
+
+  <div class="running-head">
+    <span class="rh-title">NutriLens &mdash; MVP Walkthrough Documentation</span>
+    <span class="rh-sub">Understanding recommendations &amp; filters</span>
+  </div>
+
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2 class="sec-title">Understand why a meal is recommended</h2>
+    </div>
+    <div class="sec-body">
+      <div class="sec-media">
+        <img class="shot" style="width:88mm" src="screenshots/03-why-this-meal.png" alt="Expanded Why this meal reasons on an alternative card">
+      </div>
+      <div class="sec-copy">
+        <p>NutriLens explains the reasoning behind its recommendations instead of showing only a score. Alternative meals include an expandable &lsquo;Why this meal?&rsquo; section that links the recommendation back to measurable factors such as budget, protein content, and the selected nutrition goal.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2 class="sec-title">Search and evaluate a specific meal</h2>
+    </div>
+    <div class="sec-body">
+      <div class="sec-media">
+        <img class="shot" style="width:80mm" src="screenshots/04-manual-meal-search.png" alt="Selected meal card from manual search compared to Best Match">
+      </div>
+      <div class="sec-copy">
+        <p>Users who already know what they are considering can search for a meal by name instead of relying only on the ranked list. Searching for Nasi Lemak displays its full nutrition profile and evaluates it against the current budget and goal. The Best Match remains visible underneath, allowing the user to compare the meal they intended to order with a stronger-ranked alternative.</p>
+        <div class="note"><strong>Validation-driven refinement:</strong> manual search was retained as a lower-friction pathway for users who preferred looking up a known dish instead of scanning or uploading an image.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2 class="sec-title">Apply the prototype poultry filter</h2>
+    </div>
+    <div class="sec-body">
+      <div class="sec-media">
+        <img class="shot" style="width:40mm" src="processed/05a-poultry-sidebar.png" alt="Avoid poultry checkbox enabled in the sidebar">
+        <img class="shot" style="width:92mm" src="processed/05b-poultry-results.png" alt="Results with poultry-containing meals hidden and unverified tags shown">
+      </div>
+      <div class="sec-copy">
+        <p>Users who want to avoid poultry can enable the prototype poultry filter. Meals known to contain poultry are removed before ranking. Meals whose poultry status is unknown remain visible but are clearly marked &lsquo;Poultry status unverified&rsquo; rather than implied safe. The feature is intentionally limited to poultry metadata and is not an allergy-safety or ingredient-verification system.</p>
+        <div class="note"><strong>Validation-driven refinement:</strong> this narrow filter was added after dietary-avoidance feedback and deliberately kept limited in scope for the MVP.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="page-footer">
+    <span>NutriLens | SAIA2183: AI for Tech Venture | Faculty of Artificial Intelligence, UTM</span>
+    <span>Page 2</span>
+  </div>
+
+</div>
+
+<div class="page" id="page-3">
+
+  <div class="running-head">
+    <span class="rh-title">NutriLens &mdash; MVP Walkthrough Documentation</span>
+    <span class="rh-sub">Image preview &amp; prototype boundaries</span>
+  </div>
+
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">06</span>
+      <h2 class="sec-title">Preview an uploaded meal or menu image</h2>
+    </div>
+    <div class="sec-body">
+      <div class="sec-media">
+        <img class="shot" style="width:42mm" src="processed/06-upload-sidebar.png" alt="Uploaded image preview with simulated recognition disclaimer">
+      </div>
+      <div class="sec-copy">
+        <p>A user can upload a meal or menu image and immediately preview it inside NutriLens. In the current MVP, no recognition or analysis is performed on the uploaded image. Uploading an image does not change the recommendation results; recommendations continue to use the selected budget and nutrition goal. The interface states this boundary directly so prototype behavior is not mistaken for implemented AI recognition.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">07</span>
+      <h2 class="sec-title">Review how NutriLens works and its prototype limitations</h2>
+    </div>
+    <div class="sec-body">
+      <div class="sec-media">
+        <img class="shot" style="width:28mm" src="screenshots/07a-about-navigation.png" alt="About navigation item in the sidebar">
+        <img class="shot" style="width:100mm" src="screenshots/07b-about-and-limitations.png" alt="About page with data and limitations panel expanded">
+      </div>
+      <div class="sec-copy">
+        <p>The About view explains the recommendation approach and consolidates the prototype&rsquo;s limitations in one place. Current nutrition and meal information comes from prototype data rather than a live restaurant source. Poultry metadata is not verified ingredient data, meal photos are illustrative rather than verified vendor photography, image upload performs no recognition or analysis, and user activity is not saved between sessions.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="scope-box">
+    <h3>Prototype scope</h3>
+    <p>The current NutriLens MVP uses a static prototype dataset of 15 meals and does not yet connect to live restaurant menus, user accounts, or persistent history. Match Score represents relative compatibility with the selected goal among eligible meals; it is not a health or medical rating. The poultry filter relies on prototype metadata rather than verified ingredient or allergy information, and uploaded images are previewed only. These boundaries are intentional: the MVP is designed to test the usefulness of budget- and nutrition-based meal recommendations before investing in full image recognition, restaurant integration, and persistent user features.</p>
+  </div>
+
+  <div class="page-footer">
+    <span>NutriLens | SAIA2183: AI for Tech Venture | Faculty of Artificial Intelligence, UTM</span>
+    <span>Page 3</span>
+  </div>
+
+</div>
+
+</body>
+</html>
