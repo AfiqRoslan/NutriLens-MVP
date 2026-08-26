@@ -149,8 +149,9 @@ def render_about():
               **TBC** and can be replaced after team discussion.
             - Dietary/poultry information is prototype data and is not a
               verified ingredient or allergy-safety source.
-            - Meal photos are a shared placeholder graphic, not real photos
-              of each dish.
+            - Meal photos are illustrative prototype images and may not
+              represent the exact dish served by a specific restaurant or
+              vendor.
             - Uploading a menu or meal photo previews the image only —
               **automatic dish recognition is simulated and not implemented**
               in this version. No image analysis is performed.
