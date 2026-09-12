@@ -200,20 +200,20 @@ def render_sidebar(clean_df):
         else:
             st.title("NutriLens")
 
-    st.sidebar.markdown("### Preferences")
+    st.sidebar.markdown("### What are you looking for?")
 
     budget_labels = [f"RM{b}" for b in BUDGET_OPTIONS]
     budget_choice = st.sidebar.selectbox(
-        "Budget", budget_labels, index=None, placeholder="Select budget..."
+        "Your budget", budget_labels, index=None, placeholder="Select budget..."
     )
     budget = float(budget_choice.replace("RM", "")) if budget_choice is not None else None
 
     goal = st.sidebar.selectbox(
-        "Goal", scoring.GOALS, index=None, placeholder="Select goal..."
+        "Your nutrition goal", scoring.GOALS, index=None, placeholder="Select goal..."
     )
 
     find_clicked = st.sidebar.button(
-        "Find My Best Match", type="primary", width="stretch"
+        "Find My Best Meal", type="primary", width="stretch"
     )
     if find_clicked:
         if budget is None or goal is None:
@@ -226,33 +226,37 @@ def render_sidebar(clean_df):
             st.session_state.submitted_goal = goal
             st.session_state.recommendations_ready = True
 
-    exclude_poultry = st.sidebar.checkbox("Avoid poultry (prototype)", value=False)
+    st.sidebar.markdown("### Do you need to avoid poultry?")
+    exclude_poultry = st.sidebar.checkbox("Yes, avoid poultry", value=False)
     st.sidebar.caption(
-        "Prototype meal metadata only. This is not an allergy-safety check; unknown dishes may still contain poultry."
+        "Prototype only: Poultry information is based on MVP metadata and may be "
+        "incomplete. Not intended for commercial or allergy-safety use."
     )
 
-    st.sidebar.markdown("### Find a meal")
+    st.sidebar.markdown("### Already have a meal in mind?")
     selected_meal_name = st.sidebar.selectbox(
         "Search current menu",
         options=scoring.search_meal_names(clean_df),
         index=None,
-        placeholder="Search meals by name…",
+        placeholder="Search for a meal...",
         label_visibility="collapsed",
     )
 
-    st.sidebar.markdown("### Upload menu or meal image (prototype preview)")
+    st.sidebar.markdown("### Have a photo?")
     uploaded_file = st.sidebar.file_uploader(
-        "PNG or JPG", type=["png", "jpg", "jpeg"], label_visibility="collapsed"
+        "Upload photo", type=["png", "jpg", "jpeg"], label_visibility="collapsed"
     )
     if uploaded_file is not None:
         st.sidebar.image(uploaded_file, width="stretch")
     st.sidebar.info(
-        "Dish recognition is simulated — your image is previewed only, not analyzed.",
+        "Photo analysis isn’t available yet. For now, your photo will only be previewed.",
         icon="ℹ️",
     )
 
     st.sidebar.markdown("---")
-    nav = st.sidebar.radio("Navigate", ["Recommendations", "About"], label_visibility="collapsed")
+    nav = st.sidebar.radio(
+        "Navigate", ["My Recommendations", "About NutriLens"], label_visibility="collapsed"
+    )
 
     return budget, goal, exclude_poultry, selected_meal_name, nav
 
@@ -274,7 +278,7 @@ def main():
             for warn in warnings:
                 st.caption(warn)
 
-    if nav == "Recommendations":
+    if nav == "My Recommendations":
         if st.session_state.recommendations_ready:
             render_recommendations(
                 clean_df,
