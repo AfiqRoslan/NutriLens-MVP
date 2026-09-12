@@ -90,6 +90,24 @@ def inject_css():
             align-items: center;
             justify-content: center;
         }}
+        .nl-ring-label {{
+            color: {GREEN};
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-top: 0.35rem;
+            text-align: center;
+        }}
+        .nl-why-heading {{
+            color: {NAVY};
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-top: 0.75rem;
+            margin-bottom: 0.35rem;
+            padding-top: 0.6rem;
+            border-top: 1px solid {RING_TRACK};
+        }}
         .nl-placeholder-img {{
             background: {GREEN_LIGHT};
             border-radius: 12px;
@@ -107,9 +125,21 @@ def inject_css():
     )
 
 
-def render_score_ring(score, size=88):
-    """Return an HTML snippet for a circular Match Score gauge (0-100)."""
+def render_score_ring(score, size=88, label=None):
+    """Return an HTML snippet for a circular Match Score gauge (0-100).
+
+    `label` (e.g. "Match Score", rendered visually as "MATCH SCORE" via CSS
+    text-transform) renders as a small caption under the ring — omitted by
+    default so render_selected_meal_card's existing (unlabelled) ring is
+    completely unchanged. When a label IS passed — the recommendation-card
+    rings this pass focuses on — the score number renders extra bold/larger
+    so it reads as the dominant element, not just a bigger circle.
+    """
     score = max(0, min(100, int(score)))
+    score_font = round(size * (0.22 if label else 0.2))
+    sub_font = max(9, round(size * 0.115))
+    score_weight = 800 if label else 700
+    label_html = f'<div class="nl-ring-label">{html.escape(str(label))}</div>' if label else ""
     return f"""
     <div class="nl-ring-wrap">
         <div style="
@@ -122,10 +152,11 @@ def render_score_ring(score, size=88):
                 background: {CARD_BG}; display: flex; flex-direction: column;
                 align-items: center; justify-content: center;
             ">
-                <span style="font-size: 1.1rem; font-weight: 700; color: {NAVY};">{score}</span>
-                <span style="font-size: 0.65rem; color: #8896A3;">/100</span>
+                <span style="font-size: {score_font}px; font-weight: {score_weight}; color: {NAVY};">{score}</span>
+                <span style="font-size: {sub_font}px; color: #8896A3;">/100</span>
             </div>
         </div>
+        {label_html}
     </div>
     """
 
@@ -159,23 +190,65 @@ def _render_poultry_unverified_note(poultry_status):
         st.caption("⚠ Poultry status unverified")
 
 
+def render_onboarding_state():
+    """Empty state shown before the user submits budget + goal.
+
+    Reuses existing badge/card typography classes (no new CSS) so it stays
+    visually consistent with the recommendation cards while remaining a
+    plain three-step explainer rather than a redesigned landing view.
+    """
+    st.title("Find Your Best Meal")
+    st.write(
+        "Set your budget and nutrition goal to get meal recommendations "
+        "matched to your preferences."
+    )
+
+    steps = [
+        ("1", "Set your budget", "Choose how much you want to spend."),
+        ("2", "Choose your goal", "Tell NutriLens what matters most."),
+        ("3", "Get your match", "See the meals that fit you best."),
+    ]
+    cols = st.columns(3)
+    for col, (number, step_title, step_desc) in zip(cols, steps):
+        with col:
+            with st.container(border=True):
+                st.markdown(f'<span class="nl-badge">{number}</span>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="nl-meal-name-sm">{html.escape(step_title)}</div>',
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f'<div class="nl-meal-meta-sm">{html.escape(step_desc)}</div>',
+                    unsafe_allow_html=True,
+                )
+
+    st.caption("Start by setting your preferences on the left.")
+
+
 def render_best_match_card(row, reasons, show_poultry_status=False):
-    """Render the large Best Match card: image, name/macros, score ring, reasons.
+    """Render the large Best Match card: image, score ring, then identity + reasons.
 
     Uses st.container(border=True, key=...) as the actual nesting mechanism so
     the columns/image/text below genuinely render inside one bordered/shadowed
-    card. Image and ring use fixed pixel sizes tuned to the card's own width
-    (not the full unconstrained viewport) so the image roughly matches the
-    height of the text block and the ring sits close to it.
+    card. The score ring sits directly beside the image (never at the far
+    edge) and is the visually dominant element; the content column carries
+    meal identity/macros/poultry status followed immediately by "Why this
+    meal?" and its reasons, all in one column so there's no separate
+    full-width strip below the row.
     """
     meal_name = html.escape(str(row["name"]))
 
     with st.container(border=True, key="nl-best-match-card"):
         st.markdown('<span class="nl-badge">★ Best Match</span>', unsafe_allow_html=True)
 
-        img_col, info_col, ring_col = st.columns([1.4, 3, 1])
+        img_col, score_col, info_col = st.columns([1.25, 0.9, 2.85])
         with img_col:
             render_meal_image(row["image"])
+        with score_col:
+            st.markdown(
+                render_score_ring(row["match_score"], size=116, label="Match Score"),
+                unsafe_allow_html=True,
+            )
         with info_col:
             st.markdown(f'<div class="nl-meal-name">{meal_name}</div>', unsafe_allow_html=True)
             st.markdown(
@@ -185,11 +258,10 @@ def render_best_match_card(row, reasons, show_poultry_status=False):
             )
             if show_poultry_status:
                 _render_poultry_unverified_note(row["poultry_status"])
+            st.markdown('<div class="nl-why-heading">Why this meal?</div>', unsafe_allow_html=True)
             for reason in reasons:
                 safe_reason = html.escape(str(reason))
                 st.markdown(f'<div class="nl-reason">✅ {safe_reason}</div>', unsafe_allow_html=True)
-        with ring_col:
-            st.markdown(render_score_ring(row["match_score"], size=104), unsafe_allow_html=True)
 
 
 def render_selected_meal_card(
@@ -259,18 +331,23 @@ def render_alt_card(row, reasons, show_poultry_status=False):
     """Render a compact alternative meal card with a collapsible reasons section.
 
     Each alt card gets a unique container key (derived from the meal id) since
-    Streamlit requires distinct keys per container within a single run. Image
-    and ring are small fixed sizes so the row height is driven by the text
-    content, not by an oversized image. Uses the smaller `.nl-meal-meta-sm`
-    typography variant (distinct from the Best Match card's `.nl-meal-meta`)
-    so the step 7 typography bump doesn't re-inflate this card's compactness.
+    Streamlit requires distinct keys per container within a single run. The
+    Match Score ring sits directly beside the image (never the far-right
+    edge) and is sized/labelled to stay prominent even in this compact card.
+    Reasons stay in an expander, directly under the meal details in the same
+    content column, to keep alternatives compact.
     """
     meal_name = html.escape(str(row["name"]))
 
     with st.container(border=True, key=f"nl-alt-card-{row['id']}"):
-        img_col, info_col, ring_col = st.columns([0.9, 3.4, 0.8])
+        img_col, score_col, info_col = st.columns([1.0, 0.85, 3.15])
         with img_col:
             render_meal_image(row["image"])
+        with score_col:
+            st.markdown(
+                render_score_ring(row["match_score"], size=88, label="Match Score"),
+                unsafe_allow_html=True,
+            )
         with info_col:
             st.markdown(f'<div class="nl-meal-name-sm">{meal_name}</div>', unsafe_allow_html=True)
             st.markdown(
@@ -284,5 +361,3 @@ def render_alt_card(row, reasons, show_poultry_status=False):
                 for reason in reasons:
                     safe_reason = html.escape(str(reason))
                     st.markdown(f'<div class="nl-reason">✅ {safe_reason}</div>', unsafe_allow_html=True)
-        with ring_col:
-            st.markdown(render_score_ring(row["match_score"], size=72), unsafe_allow_html=True)

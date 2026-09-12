@@ -123,6 +123,39 @@ def render_recommendations(
     )
 
 
+def render_selected_meal_preview(clean_df, budget, goal, exclude_poultry, selected_meal_name):
+    """Standalone evaluation card for a manually searched meal, usable before
+    Budget + Goal have been submitted via "Find My Best Match".
+
+    Reuses the same scoring.evaluate_selected_meal/ui.render_selected_meal_card
+    pathway as the full recommendations flow, so a later submission doesn't
+    change how this meal's own numbers are evaluated. There is no ranked list
+    to compare against yet at this point, so is_best_match is always False
+    here — the Best Match badge/suppression logic only applies once the full
+    flow in render_recommendations runs.
+    """
+    evaluation = scoring.evaluate_selected_meal(
+        clean_df, selected_meal_name, goal, budget, exclude_poultry=exclude_poultry
+    )
+    if evaluation is None:
+        return
+
+    st.title("Selected Meal")
+    ui.render_selected_meal_card(evaluation, is_best_match=False, show_poultry_status=exclude_poultry)
+
+
+def init_session_state():
+    """One-time defaults for the submit-to-see-recommendations flow.
+
+    Recommendations render from submitted_budget/submitted_goal, not the live
+    sidebar widget values, so changing a dropdown after submission doesn't
+    silently recompute results until "Find My Best Match" is clicked again.
+    """
+    st.session_state.setdefault("recommendations_ready", False)
+    st.session_state.setdefault("submitted_budget", None)
+    st.session_state.setdefault("submitted_goal", None)
+
+
 def render_about():
     st.title("About NutriLens")
     st.markdown(
@@ -170,10 +203,28 @@ def render_sidebar(clean_df):
     st.sidebar.markdown("### Preferences")
 
     budget_labels = [f"RM{b}" for b in BUDGET_OPTIONS]
-    budget_choice = st.sidebar.selectbox("Budget", budget_labels, index=2)
-    budget = float(budget_choice.replace("RM", ""))
+    budget_choice = st.sidebar.selectbox(
+        "Budget", budget_labels, index=None, placeholder="Select budget..."
+    )
+    budget = float(budget_choice.replace("RM", "")) if budget_choice is not None else None
 
-    goal = st.sidebar.selectbox("Goal", scoring.GOALS)
+    goal = st.sidebar.selectbox(
+        "Goal", scoring.GOALS, index=None, placeholder="Select goal..."
+    )
+
+    find_clicked = st.sidebar.button(
+        "Find My Best Match", type="primary", width="stretch"
+    )
+    if find_clicked:
+        if budget is None or goal is None:
+            st.session_state.recommendations_ready = False
+            st.session_state.submitted_budget = None
+            st.session_state.submitted_goal = None
+            st.sidebar.warning("Please select a budget and nutrition goal.")
+        else:
+            st.session_state.submitted_budget = budget
+            st.session_state.submitted_goal = goal
+            st.session_state.recommendations_ready = True
 
     exclude_poultry = st.sidebar.checkbox("Avoid poultry (prototype)", value=False)
     st.sidebar.caption(
@@ -207,6 +258,7 @@ def render_sidebar(clean_df):
 
 
 def main():
+    init_session_state()
     clean_df, errors, warnings = get_dataset()
 
     if errors:
@@ -215,7 +267,7 @@ def main():
             st.error(err)
         st.stop()
 
-    budget, goal, exclude_poultry, selected_meal_name, nav = render_sidebar(clean_df)
+    _budget, _goal, exclude_poultry, selected_meal_name, nav = render_sidebar(clean_df)
 
     if warnings:
         with st.sidebar.expander("Dataset warnings"):
@@ -223,13 +275,23 @@ def main():
                 st.caption(warn)
 
     if nav == "Recommendations":
-        render_recommendations(
-            clean_df,
-            budget,
-            goal,
-            exclude_poultry=exclude_poultry,
-            selected_meal_name=selected_meal_name,
-        )
+        if st.session_state.recommendations_ready:
+            render_recommendations(
+                clean_df,
+                st.session_state.submitted_budget,
+                st.session_state.submitted_goal,
+                exclude_poultry=exclude_poultry,
+                selected_meal_name=selected_meal_name,
+            )
+        elif selected_meal_name:
+            if _budget is not None and _goal is not None:
+                render_selected_meal_preview(
+                    clean_df, _budget, _goal, exclude_poultry, selected_meal_name
+                )
+            else:
+                st.info("Select both a budget and nutrition goal to evaluate this meal.")
+        else:
+            ui.render_onboarding_state()
     else:
         render_about()
 
